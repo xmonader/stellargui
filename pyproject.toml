@@ -9,6 +9,13 @@ license = "MIT"
 python = "^3.8"
 stellar-sdk = "^2.10.1"
 
+
+### extras
+ttkthemes = {version = "^3.2.0", optional = true}
+
+[tool.poetry.extras]
+ttkthemes = ["ttkthemes"]
+
 [tool.poetry.dev-dependencies]
 
 [build-system]
