@@ -8,6 +8,7 @@ import copy
 import json
 from stellar import Stellar, PUBLIC_NETWORK_PASSPHRASE, TESTNET_NETWORK_PASSPHRASE
 import threading
+import webbrowser
 
 
 NETWORKS_CONSTS = {
@@ -183,9 +184,71 @@ class StellarGUI:
                 err = str(e)
                 showerror(title="Error!", message=err)
 
-    
+    def show_about_message(self):
+        showinfo(title="StellarGUI", message="stellarGUI developed by xmonader.\nHomepage: github.com/xmonader/stellargui")
 
-    def show_add_dialog(self):
+    def show_add_network_dialog(self):
+        networkdisplaynamevar = StringVar()
+        networkpassphrasevar = StringVar()
+        networkhorizonvar = StringVar()
+        should_reload = False
+
+        dlg = Toplevel(self.root)
+
+        def dismiss():
+            dlg.grab_release()
+            dlg.destroy()
+
+        def add():
+            nonlocal should_reload
+            displayname = networkdisplaynamevar.get()
+            passphrase = networkpassphrasevar.get()
+            horizon = networkhorizonvar.get()
+            try:
+                self.save_network({"name":displayname, "network_passphrase":passphrase, "horizon":horizon})
+            except Exception as e:
+                showerror("Error", str(e))
+            else:
+                showinfo(title="Network Add", message=f"Network {displayname} added successfully")
+                should_reload = True
+
+        ttk.Label(dlg, text="Display name").grid(column=0, row=0, sticky=(W))
+        networkdisplaynameentry = ttk.Entry(dlg, textvariable=networkdisplaynamevar)
+        networkdisplaynameentry.grid(column=1, row=0, columnspan=2, sticky=(W, E))
+        networkdisplaynameentry.insert(0, networkdisplaynamevar.get())
+
+        ttk.Label(dlg, text="Passphrase").grid(column=0, row=1, sticky=(W))
+        passphraseentry = ttk.Entry(dlg, textvariable=networkpassphrasevar)
+        passphraseentry.grid(column=1, row=1, columnspan=2, sticky=(W, E))
+        passphraseentry.insert(0, networkpassphrasevar.get())
+
+        ttk.Label(dlg, text="Horizon").grid(column=0, row=2, sticky=W)
+        horizon = ttk.Entry(dlg, textvariable=networkhorizonvar)
+        horizon.grid(column=1, row=2, columnspan=1, sticky=(W, E))
+
+
+        ttk.Button(dlg, text="Add network", command=add).grid(column=0, row=4, sticky=(W, E))
+        ttk.Button(dlg, text="Close", command=dismiss).grid(column=2, row=4, sticky=(W, E))
+
+        for child in dlg.winfo_children():
+            child.grid_configure(padx=2, pady=2)
+
+        dlg.columnconfigure(0, weight=1)
+        dlg.columnconfigure(1, weight=1)
+        dlg.columnconfigure(2, weight=1)
+
+        dlg.rowconfigure(0, weight=1)
+        dlg.rowconfigure(1, weight=1)
+        dlg.rowconfigure(2, weight=1)
+
+        dlg.protocol("WM_DELETE_WINDOW", dismiss)  # intercept close button
+        dlg.transient(self.root)  # dialog window is related to main
+        dlg.wait_visibility()  # can't grab until window appears, so we wait
+        dlg.grab_set()  # ensure all input goes to our window
+        dlg.wait_window()  # block until window is destroyed
+
+
+    def show_add_wallet_dialog(self):
         walletdisplaynamevar = StringVar()
         newwalletaddrvar = StringVar()
         newwalletsecretvar = StringVar()
@@ -427,9 +490,11 @@ class StellarGUI:
 
         current_theme_var = StringVar()
         if self.has_ttkthemes:
-            current_theme_var.set("breeze")
+            current_theme_var.set("plastik")
         else:
             current_theme_var.set("clam")
+
+
         # current_theme_var.set(s.theme_use())
         wallets_names = self.filter_wallets_by_network("ALL")
         addr = ""
@@ -453,10 +518,10 @@ class StellarGUI:
         wallets_list_frame.grid(column=0, row=0, columnspan=4, sticky=(N, W, E, S))
 
 
-        combobox_theme = ttk.Combobox(
-            wallets_list_frame, values=themes, textvariable=current_theme_var
-        )
-        combobox_theme.grid(column=0, row=0, columnspan=2, sticky=(W, E))
+        # combobox_theme = ttk.Combobox(
+        #     wallets_list_frame, values=themes, textvariable=current_theme_var
+        # )
+        # combobox_theme.grid(column=0, row=0, columnspan=2, sticky=(W, E))
         
         combobox_network_filter = ttk.Combobox(
             wallets_list_frame, values=("ALL", *self.list_all_networks()), textvariable=combobox_network_filter_var
@@ -609,7 +674,12 @@ class StellarGUI:
             self.show_transactions_dialog()
 
         def add_wallet_cb():
-            should_reload_vars = self.show_add_dialog()
+            should_reload_vars = self.show_add_wallet_dialog()
+            if should_reload_vars:
+                reload_vars()
+
+        def add_network_cb():
+            should_reload_vars = self.show_add_network_dialog()
             if should_reload_vars:
                 reload_vars()
 
@@ -628,6 +698,14 @@ class StellarGUI:
             else:
                 self.root.set_theme(current_theme_var.get())
 
+        def get_theme_changer_fun(theme_name):
+
+            def fun():
+                print("called with theme name:", theme_name)
+                current_theme_var.set(theme_name)
+                theme_changed_cb(None)
+            return fun
+
 
         def combobox_network_filter_changed(ev):
             reload_vars()
@@ -635,7 +713,7 @@ class StellarGUI:
         wallets_listbox.bind("<<ListboxSelect>>", lambda e: update_activewallet(wallets_listbox.curselection()))
         wallets_listbox.bind("<Double-1>", lambda e: update_activewallet(wallets_listbox.curselection()))
         combobox_network_filter.bind("<<ComboboxSelected>>", combobox_network_filter_changed)
-        combobox_theme.bind("<<ComboboxSelected>>", theme_changed_cb)
+        # combobox_theme.bind("<<ComboboxSelected>>", theme_changed_cb)
 
         btn_transfer.configure(command=send_money)
         btn_transactions.configure(command=self.show_transactions_dialog)
@@ -644,6 +722,28 @@ class StellarGUI:
         btn_del_wallet.configure(command=delete_wallet_cb)
         theme_changed_cb(None)
 
+        menubar = Menu(self.root)
+        self.root.configure(menu=menubar)
+        file_menu = Menu(menubar)
+        file_menu.add_command(label='Add Wallet', command=add_wallet_cb)
+        file_menu.add_command(label='Add Network', command=add_network_cb)
+        file_menu.add_command(label='Exit', command=exit)
+        
+        view_menu = Menu(menubar)
+        themes_view_menu = Menu(view_menu)
+        for t in themes:
+            themes_view_menu.add_command(label=t, command=get_theme_changer_fun(t))
+
+        view_menu.add_cascade(label='Theme', underline=0, menu=themes_view_menu)
+
+
+        about_menu = Menu(menubar)
+        about_menu.add_command(label='About StellarGUI', command=self.show_about_message)
+        about_menu.add_command(label='Visit Homepage', command=lambda: webbrowser.open_new_tab("https://github.com/xmonader/stellargui"))
+
+        menubar.add_cascade(label='File', underline=0, menu=file_menu)
+        menubar.add_cascade(label='View', underline=0, menu=view_menu)
+        menubar.add_cascade(label='About', underline=0, menu=about_menu)
 
         reload_vars()
 
