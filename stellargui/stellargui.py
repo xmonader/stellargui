@@ -393,6 +393,7 @@ class StellarGUI:
 
 
     def build_ui(self):
+
         self.root = None
         self.has_ttkthemes = False
         try:
@@ -405,8 +406,19 @@ class StellarGUI:
             
         # ico = PhotoImage(file = 'stellaricon.png')
         # self.root.iconphoto(False, ico)
-        geometry = "500x350"
-        self.root.geometry(geometry)
+        def center_win():
+
+            w = 750
+            h = 320
+
+            # sw = self.root.winfo_screenwidth()
+            # sh = self.root.winfo_screenheight()
+
+            # x = (sw - w)/2
+            # y = (sh - h)/2
+            # self.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
+            self.root.geometry(f"{w}x{h}")
+        center_win()
         self.root.title("StellarGUI")
         s=ttk.Style()
         themes = s.theme_names()
@@ -550,7 +562,7 @@ class StellarGUI:
             walletsnamesvar.set(wallets_names)
 
             wallets_listbox.configure(listvariable=walletsnamesvar)
-            self.root.geometry(geometry)
+            center_win()
 
 
         def reload_vars():
