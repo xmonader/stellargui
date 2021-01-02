@@ -359,7 +359,14 @@ class StellarGUI:
         def do_list_payments():
             nonlocal payments
             payments = self._stellarwallet.list_payments()
-            paymentsvar.set(payments)
+            payments_strs = []
+            for p in payments:
+                if p.from_address == p.my_address:
+                    payments_strs.append(f"paid {p.balance} to {p.to_address}")
+                elif p.to_address == p.my_address:
+                    payments_strs.append(f"received {p.balance} from {p.from_address}")
+
+            paymentsvar.set(payments_strs)
         t = threading.Thread(target=do_list_payments)
         t.start()
 
