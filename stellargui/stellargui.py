@@ -393,14 +393,32 @@ class StellarGUI:
 
 
     def build_ui(self):
-
-        self.root = Tk()
+        self.root = None
+        self.has_ttkthemes = False
+        try:
+            import ttkthemes
+        except ImportError:
+            self.root = Tk()
+        else:
+            self.has_ttkthemes = True
+            self.root = ttkthemes.ThemedTk()
+            
         # ico = PhotoImage(file = 'stellaricon.png')
         # self.root.iconphoto(False, ico)
-        self.root.geometry("900x200")
+        geometry = "500x350"
+        self.root.geometry(geometry)
         self.root.title("StellarGUI")
+        s=ttk.Style()
+        themes = s.theme_names()
+        if self.has_ttkthemes:
+            themes = ttkthemes.THEMES
 
-
+        current_theme_var = StringVar()
+        if self.has_ttkthemes:
+            current_theme_var.set("breeze")
+        else:
+            current_theme_var.set("clam")
+        # current_theme_var.set(s.theme_use())
         wallets_names = self.filter_wallets_by_network("ALL")
         addr = ""
         wallet_name_var = StringVar()
@@ -422,21 +440,28 @@ class StellarGUI:
         wallets_list_frame = ttk.Frame(self.root, padding="3 3 12 12")
         wallets_list_frame.grid(column=0, row=0, columnspan=4, sticky=(N, W, E, S))
 
+
+        combobox_theme = ttk.Combobox(
+            wallets_list_frame, values=themes, textvariable=current_theme_var
+        )
+        combobox_theme.grid(column=0, row=0, columnspan=2, sticky=(W, E))
+        
         combobox_network_filter = ttk.Combobox(
             wallets_list_frame, values=("ALL", *self.list_all_networks()), textvariable=combobox_network_filter_var
         )
-        combobox_network_filter.grid(column=0, row=0, columnspan=2, sticky=(W, E))
+        combobox_network_filter.grid(column=0, row=1, columnspan=2, sticky=(W, E))
+
 
         wallets_listbox = Listbox(wallets_list_frame, selectmode=SINGLE, listvariable=active_wallet)
         scroll = ttk.Scrollbar(wallets_list_frame, orient=VERTICAL, command=wallets_listbox.yview)
         wallets_listbox.configure(yscrollcommand=scroll.set)
-        wallets_listbox.grid(column=0, row=1, columnspan=2, sticky=(N, W, E, S))
-        scroll.grid(column=2, row=1, sticky=(N, S))
+        wallets_listbox.grid(column=0, row=2, columnspan=2, sticky=(N, W, E, S))
+        scroll.grid(column=2, row=2, sticky=(N, S))
         btn_add_wallet = ttk.Button(wallets_list_frame, text="+")
-        btn_add_wallet.grid(column=0, row=2, sticky=(W, E))
+        btn_add_wallet.grid(column=0, row=3, sticky=(W, E))
 
         btn_del_wallet = ttk.Button(wallets_list_frame, text="-")
-        btn_del_wallet.grid(column=1, row=2, sticky=(W, E))
+        btn_del_wallet.grid(column=1, row=3, sticky=(W, E))
 
         wallet_info_frame = ttk.Frame(self.root, padding="3 3 12 12")
         wallet_info_frame.grid(column=4, row=0, sticky=(N, W, E, S))
@@ -525,7 +550,7 @@ class StellarGUI:
             walletsnamesvar.set(wallets_names)
 
             wallets_listbox.configure(listvariable=walletsnamesvar)
-            self.root.geometry("800x200")
+            self.root.geometry(geometry)
 
 
         def reload_vars():
@@ -585,18 +610,27 @@ class StellarGUI:
                 if answer == "yes":
                     self.delete_wallet(wname)
 
+        def theme_changed_cb(ev):
+            if not self.has_ttkthemes:
+                s.theme_use(current_theme_var.get())
+            else:
+                self.root.set_theme(current_theme_var.get())
+
+
         def combobox_network_filter_changed(ev):
             reload_vars()
 
         wallets_listbox.bind("<<ListboxSelect>>", lambda e: update_activewallet(wallets_listbox.curselection()))
         wallets_listbox.bind("<Double-1>", lambda e: update_activewallet(wallets_listbox.curselection()))
         combobox_network_filter.bind("<<ComboboxSelected>>", combobox_network_filter_changed)
+        combobox_theme.bind("<<ComboboxSelected>>", theme_changed_cb)
 
         btn_transfer.configure(command=send_money)
         btn_transactions.configure(command=self.show_transactions_dialog)
         check_showsecret.configure(command=togglesecret)
         btn_add_wallet.configure(command=add_wallet_cb)
         btn_del_wallet.configure(command=delete_wallet_cb)
+        theme_changed_cb(None)
 
 
         reload_vars()
