@@ -38,5 +38,4 @@ Can be enabled using `poetry install -E ttkthemes` as it's defined as optional d
 
 
 ## TODO
-- allow configuring multiple networks
 - option to migrate money to another account

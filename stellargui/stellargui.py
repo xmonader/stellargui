@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from tkinter import *
 from tkinter.messagebox import *
 from tkinter import ttk
@@ -32,6 +33,7 @@ def walk_non_recursive(path: str, filter_fun=lambda x: x):
             yield entry
 
 
+APP_ICON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"stellargui.ico")
 
 
 class StellarGUI:
@@ -267,8 +269,9 @@ class StellarGUI:
             displayname = walletdisplaynamevar.get()
             secret = newwalletsecretvar.get()
             try:
-                w = Stellar(displayname, secret=secret, network=network)
+                w = Stellar(displayname, secret=secret, network=self.networks[network])
                 self.save_wallet(w.to_dict())
+                showinfo(title='Wallet added', message="successfully imported the wallet")
             except Exception as e:
                 showerror("Error", str(e))
             else:
@@ -467,8 +470,9 @@ class StellarGUI:
             self.has_ttkthemes = True
             self.root = ttkthemes.ThemedTk()
             
-        # ico = PhotoImage(file = 'stellaricon.png')
-        # self.root.iconphoto(False, ico)
+        # self.root.iconbitmap(APP_ICON_PATH)
+        # self.root.tk.call('wm', 'iconphoto', self.root._w, PhotoImage(file=APP_ICON_PATH))
+
         def center_win():
 
             w = 750
