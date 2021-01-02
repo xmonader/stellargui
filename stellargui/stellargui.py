@@ -2,10 +2,8 @@ from tkinter import *
 from tkinter.messagebox import *
 from tkinter import ttk
 import os
-import sys
 import pathlib
 import json
-import requests
 import copy
 import json
 from stellar import Stellar, PUBLIC_NETWORK_PASSPHRASE, TESTNET_NETWORK_PASSPHRASE
@@ -275,11 +273,125 @@ class StellarGUI:
         return should_reload
 
 
+    def show_payment_details_dialog(self, payment_obj):
+        dlg = Toplevel(self.root)
+
+
+        def dismiss():
+            dlg.grab_release()
+            dlg.destroy()
+
+        ttk.Label(dlg, text="From").grid(column=0, row=0, sticky=(W, E))
+        entryfrom = ttk.Entry(dlg, text=payment_obj.from_address)
+        entryfrom.grid(column=1, row=0, sticky=(W, E))
+        entryfrom.insert(0, payment_obj.from_address)
+        entryfrom.configure(state="readonly")
+
+
+        ttk.Label(dlg, text="To").grid(column=0, row=1, sticky=(W, E))
+        entryto=ttk.Entry(dlg, text=payment_obj.to_address)
+        entryto.grid(column=1, row=1, sticky=(W, E))
+        entryto.insert(0, payment_obj.to_address)
+        entryto.configure(state="readonly")
+
+        ttk.Label(dlg, text="Amount").grid(column=0, row=2, sticky=(W, E))
+        ttk.Label(dlg, text=payment_obj.balance).grid(column=1, row=2, sticky=(W, E))
+
+
+        ttk.Label(dlg, text="Payment Type").grid(column=0, row=3, sticky=(W, E))
+        ttk.Label(dlg, text=payment_obj.payment_type).grid(column=1, row=3, sticky=(W, E))
+
+
+        ttk.Label(dlg, text="TX Hash").grid(column=0, row=4, sticky=(W, E))
+        entryhash = ttk.Entry(dlg, text=payment_obj.transaction_hash)
+        entryhash.grid(column=1, row=4, sticky=(W, E))
+        entryhash.insert(0, payment_obj.transaction_hash)
+
+        ttk.Button(dlg, text="Close", command=dismiss).grid(column=0, columnspan=4, row=4, sticky=(W, E))
+
+        for child in dlg.winfo_children():
+            child.grid_configure(padx=2, pady=2)
+
+        dlg.columnconfigure(0, weight=1)
+        dlg.columnconfigure(1, weight=1)
+        dlg.columnconfigure(2, weight=1)
+
+        dlg.rowconfigure(0, weight=1)
+        dlg.rowconfigure(1, weight=1)
+        dlg.rowconfigure(2, weight=1)
+
+        dlg.protocol("WM_DELETE_WINDOW", dismiss)  # intercept close button
+        dlg.transient(self.root)  # dialog window is related to main
+        dlg.wait_visibility()  # can't grab until window appears, so we wait
+        dlg.grab_set()  # ensure all input goes to our window
+        dlg.wait_window()  # block until window is destroyed
+
+
+
+
+    def show_transactions_dialog(self):
+
+        dlg = Toplevel(self.root)
+
+
+        def dismiss():
+            dlg.grab_release()
+            dlg.destroy()
+
+        paymentsvar = StringVar()
+        txs_listbox = Listbox(dlg, selectmode=SINGLE, listvariable=paymentsvar)
+        yscroll = ttk.Scrollbar(dlg, orient=VERTICAL, command=txs_listbox.yview)
+        xscroll = ttk.Scrollbar(dlg, orient=HORIZONTAL, command=txs_listbox.xview)
+        txs_listbox.configure(yscrollcommand=yscroll.set)
+        txs_listbox.configure(xscrollcommand=xscroll.set)
+        txs_listbox.grid(column=0, row=1, columnspan=8, sticky=(N, W, E, S))
+        yscroll.grid(column=8, row=1, sticky=(N, S))
+        xscroll.grid(column=0, row=2, columnspan=8, sticky=(W, E))
+        payments = None
+
+        def show_tx_info(selectiontup):
+            idx = selectiontup[0]
+            print("idx:", idx)
+            print("payments:", payments)
+            payment = payments[idx]
+            self.show_payment_details_dialog(payment)
+
+        def do_list_payments():
+            nonlocal payments
+            payments = self._stellarwallet.list_payments()
+            paymentsvar.set(payments)
+        t = threading.Thread(target=do_list_payments)
+        t.start()
+
+        ttk.Button(dlg, text="Close", command=dismiss).grid(column=0, columnspan=4, row=4, sticky=(W, E))
+        txs_listbox.bind("<Double-1>", lambda e: show_tx_info(txs_listbox.curselection()) )
+
+        for child in dlg.winfo_children():
+            child.grid_configure(padx=2, pady=2)
+
+        dlg.columnconfigure(0, weight=1)
+        dlg.columnconfigure(1, weight=1)
+        dlg.columnconfigure(2, weight=1)
+
+        dlg.rowconfigure(0, weight=1)
+        dlg.rowconfigure(1, weight=1)
+        dlg.rowconfigure(2, weight=1)
+
+        dlg.protocol("WM_DELETE_WINDOW", dismiss)  # intercept close button
+        dlg.transient(self.root)  # dialog window is related to main
+        dlg.wait_visibility()  # can't grab until window appears, so we wait
+        dlg.grab_set()  # ensure all input goes to our window
+        dlg.wait_window()  # block until window is destroyed
+
+
+
     def build_ui(self):
 
         self.root = Tk()
-        self.root.geometry("900x400")
-        self.root.title("TinyWallet")
+        # ico = PhotoImage(file = 'stellaricon.png')
+        # self.root.iconphoto(False, ico)
+        self.root.geometry("900x200")
+        self.root.title("StellarGUI")
 
 
         wallets_names = self.filter_wallets_by_network("ALL")
@@ -406,7 +518,7 @@ class StellarGUI:
             walletsnamesvar.set(wallets_names)
 
             wallets_listbox.configure(listvariable=walletsnamesvar)
-            self.root.geometry("900x400")
+            self.root.geometry("800x200")
 
 
         def reload_vars():
@@ -449,6 +561,9 @@ class StellarGUI:
             else:
                 secretvar.set(secret_holder)
 
+        def show_transactions_cb():
+            self.show_transactions_dialog()
+
         def add_wallet_cb():
             should_reload_vars = self.show_add_dialog()
             if should_reload_vars:
@@ -471,6 +586,7 @@ class StellarGUI:
         combobox_network_filter.bind("<<ComboboxSelected>>", combobox_network_filter_changed)
 
         btn_transfer.configure(command=send_money)
+        btn_transactions.configure(command=self.show_transactions_dialog)
         check_showsecret.configure(command=togglesecret)
         btn_add_wallet.configure(command=add_wallet_cb)
         btn_del_wallet.configure(command=delete_wallet_cb)
