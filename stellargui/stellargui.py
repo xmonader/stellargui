@@ -184,98 +184,103 @@ class StellarGUI:
             except Exception as e:
                 err = str(e)
                 showerror(title="Error!", message=err)
+
+    
+
+    def show_add_dialog(self):
+        walletdisplaynamevar = StringVar()
+        newwalletaddrvar = StringVar()
+        newwalletsecretvar = StringVar()
+        networkvar = StringVar()
+        should_reload = False
+
+        dlg = Toplevel(self.root)
+
+        def dismiss():
+            dlg.grab_release()
+            dlg.destroy()
+
+        def add():
+            nonlocal should_reload
+            network = networkvar.get()
+            displayname = walletdisplaynamevar.get()
+            secret = newwalletsecretvar.get()
+            try:
+                w = Stellar(displayname, secret=secret, network=network)
+                self.save_wallet(w.to_dict())
+            except Exception as e:
+                showerror("Error", str(e))
+            else:
+                should_reload = True
+
+        def generate():
+            nonlocal should_reload
+
+            network_name = networkvar.get()
+            network = self.networks[network_name]
+            displayname = walletdisplaynamevar.get()
+            try:
+                w = Stellar(displayname, network=network)
+                newwalletaddrvar.set(w.address)
+                newwalletsecretvar.set(w.secret)
+                self.save_wallet(w.to_dict())
+                if network_name == "TESTNET":
+                    t = threading.Thread(target=w.activate_through_friendbot)
+                    t.start()
+            except Exception as e:
+                print(e)
+                showerror("Error", str(e))
+            else:
+
+                should_reload = True
+
+        ttk.Label(dlg, text="Display name").grid(column=0, row=0, sticky=(W))
+        walletdisplaynameentry = ttk.Entry(dlg, textvariable=walletdisplaynamevar)
+        walletdisplaynameentry.grid(column=1, row=0, columnspan=2, sticky=(W, E))
+        walletdisplaynameentry.insert(0, walletdisplaynamevar.get())
+
+        ttk.Label(dlg, text="Address").grid(column=0, row=1, sticky=(W))
+        newwalletaddrentry = ttk.Entry(dlg, textvariable=newwalletaddrvar)
+        newwalletaddrentry.grid(column=1, row=1, columnspan=2, sticky=(W, E))
+        newwalletaddrentry.insert(0, newwalletaddrvar.get())
+
+        ttk.Label(dlg, text="Secret").grid(column=0, row=2, sticky=W)
+        newwalletsecret = ttk.Entry(dlg, textvariable=newwalletsecretvar)
+        newwalletsecret.grid(column=1, row=2, columnspan=1, sticky=(W, E))
+
+        ttk.Label(dlg, text="Network").grid(column=0, row=3, sticky=W)
+        network_combo = ttk.Combobox(dlg, textvariable=networkvar, values=self.list_all_networks())
+        network_combo.grid(column=1, row=3, columnspan=1, sticky=(W, E))
+        network_combo.current(0)
+        ttk.Button(dlg, text="Add wallet", command=add).grid(column=0, row=4, sticky=(W, E))
+        ttk.Button(dlg, text="Generate", command=generate).grid(column=1, row=4, sticky=(W, E))
+        ttk.Button(dlg, text="Close", command=dismiss).grid(column=2, row=4, sticky=(W, E))
+
+        for child in dlg.winfo_children():
+            child.grid_configure(padx=2, pady=2)
+
+        dlg.columnconfigure(0, weight=1)
+        dlg.columnconfigure(1, weight=1)
+        dlg.columnconfigure(2, weight=1)
+
+        dlg.rowconfigure(0, weight=1)
+        dlg.rowconfigure(1, weight=1)
+        dlg.rowconfigure(2, weight=1)
+
+        dlg.protocol("WM_DELETE_WINDOW", dismiss)  # intercept close button
+        dlg.transient(self.root)  # dialog window is related to main
+        dlg.wait_visibility()  # can't grab until window appears, so we wait
+        dlg.grab_set()  # ensure all input goes to our window
+        dlg.wait_window()  # block until window is destroyed
+        return should_reload
+
+
     def build_ui(self):
 
         self.root = Tk()
         self.root.geometry("900x400")
         self.root.title("TinyWallet")
 
-        def show_add_dialog():
-            walletdisplaynamevar = StringVar()
-            newwalletaddrvar = StringVar()
-            newwalletsecretvar = StringVar()
-            networkvar = StringVar()
-            should_reload = False
-
-            dlg = Toplevel(self.root)
-
-            def dismiss():
-                dlg.grab_release()
-                dlg.destroy()
-
-            def add():
-                nonlocal should_reload
-                network = networkvar.get()
-                displayname = walletdisplaynamevar.get()
-                secret = newwalletsecretvar.get()
-                try:
-                    w = Stellar(displayname, secret=secret, network=network)
-                    self.save_wallet(w.to_dict())
-                except Exception as e:
-                    showerror("Error", str(e))
-                else:
-                    should_reload = True
-
-            def generate():
-                nonlocal should_reload
-
-                network_name = networkvar.get()
-                network = self.networks[network_name]
-                displayname = walletdisplaynamevar.get()
-                try:
-                    w = Stellar(displayname, network=network)
-                    newwalletaddrvar.set(w.address)
-                    newwalletsecretvar.set(w.secret)
-                    self.save_wallet(w.to_dict())
-                    if network_name == "TESTNET":
-                        t = threading.Thread(target=w.activate_through_friendbot)
-                        t.start()
-                except Exception as e:
-                    print(e)
-                    showerror("Error", str(e))
-                else:
-
-                    should_reload = True
-
-            ttk.Label(dlg, text="Display name").grid(column=0, row=0, sticky=(W))
-            walletdisplaynameentry = ttk.Entry(dlg, textvariable=walletdisplaynamevar)
-            walletdisplaynameentry.grid(column=1, row=0, columnspan=2, sticky=(W, E))
-            walletdisplaynameentry.insert(0, walletdisplaynamevar.get())
-
-            ttk.Label(dlg, text="Address").grid(column=0, row=1, sticky=(W))
-            newwalletaddrentry = ttk.Entry(dlg, textvariable=newwalletaddrvar)
-            newwalletaddrentry.grid(column=1, row=1, columnspan=2, sticky=(W, E))
-            newwalletaddrentry.insert(0, newwalletaddrvar.get())
-
-            ttk.Label(dlg, text="Secret").grid(column=0, row=2, sticky=W)
-            newwalletsecret = ttk.Entry(dlg, textvariable=newwalletsecretvar)
-            newwalletsecret.grid(column=1, row=2, columnspan=1, sticky=(W, E))
-
-            ttk.Label(dlg, text="Network").grid(column=0, row=3, sticky=W)
-            network_combo = ttk.Combobox(dlg, textvariable=networkvar, values=self.list_all_networks())
-            network_combo.grid(column=1, row=3, columnspan=1, sticky=(W, E))
-            network_combo.current(0)
-            ttk.Button(dlg, text="Add wallet", command=add).grid(column=0, row=4, sticky=(W, E))
-            ttk.Button(dlg, text="Generate", command=generate).grid(column=1, row=4, sticky=(W, E))
-            ttk.Button(dlg, text="Close", command=dismiss).grid(column=2, row=4, sticky=(W, E))
-
-            for child in dlg.winfo_children():
-                child.grid_configure(padx=2, pady=2)
-
-            dlg.columnconfigure(0, weight=1)
-            dlg.columnconfigure(1, weight=1)
-            dlg.columnconfigure(2, weight=1)
-
-            dlg.rowconfigure(0, weight=1)
-            dlg.rowconfigure(1, weight=1)
-            dlg.rowconfigure(2, weight=1)
-
-            dlg.protocol("WM_DELETE_WINDOW", dismiss)  # intercept close button
-            dlg.transient(self.root)  # dialog window is related to main
-            dlg.wait_visibility()  # can't grab until window appears, so we wait
-            dlg.grab_set()  # ensure all input goes to our window
-            dlg.wait_window()  # block until window is destroyed
-            return should_reload
 
         wallets_names = self.filter_wallets_by_network("ALL")
         addr = ""
@@ -352,7 +357,10 @@ class StellarGUI:
         cb_assets.grid(column=2, row=7, sticky=(W, E))
 
         btn_transfer = ttk.Button(wallet_info_frame, text="Transfer")
-        btn_transfer.grid(column=0, row=8, columnspan=3, sticky=(W, E))
+        btn_transfer.grid(column=0, columnspan=2, row=8, sticky=(W, E))
+
+        btn_transactions = ttk.Button(wallet_info_frame, text="Transactions")
+        btn_transactions.grid(column=2, columnspan=3, row=8, sticky=(W, E))
 
         for child in wallet_info_frame.winfo_children():
             child.grid_configure(padx=2, pady=2)
@@ -442,7 +450,7 @@ class StellarGUI:
                 secretvar.set(secret_holder)
 
         def add_wallet_cb():
-            should_reload_vars = show_add_dialog()
+            should_reload_vars = self.show_add_dialog()
             if should_reload_vars:
                 reload_vars()
 
