@@ -7,7 +7,7 @@ import pathlib
 import json
 import copy
 import json
-from stellar import Stellar, PUBLIC_NETWORK_PASSPHRASE, TESTNET_NETWORK_PASSPHRASE
+from .stellar import Stellar, PUBLIC_NETWORK_PASSPHRASE, TESTNET_NETWORK_PASSPHRASE
 import threading
 import webbrowser
 
